@@ -2,6 +2,7 @@
 import vectormath
 import numpy
 from PIL import Image
+import random
 
 class Sphere(object):
     """Represents a sphere object in a 3d world
@@ -12,6 +13,7 @@ class Sphere(object):
     def __init__(self, center, radius):
         self.center = numpy.array(center, dtype=numpy.float64)
         self.radius = float(radius)
+        self.color = min(1, random.random() + .1)
 
     def get_first_intersection(self, ray):
         line_intersections = self.get_intersections(ray)
@@ -35,7 +37,7 @@ class Sphere(object):
 
     def render_intersection(self, intersection, ray, bouncenum):
         """Returns the value to render, possibly by recusively rendering reflections"""
-        return 1
+        return self.color
 
 class View(object):
     """Represents a camera, and a rectangle on a plane, between which rays can be traced
@@ -48,7 +50,7 @@ class View(object):
     >>> v = View(((0,0,3), (1,0,3)), ((0,0,3), (0,1,3)), 2)
     >>> v
     View at [ 0.  0.  5.] pointed at [ 0.  0.  3.]
-     with horizon vector [ 1.  0.  0.]
+     with horizontal vector [ 1.  0.  0.]
      and up vector [ 0.  1.  0.]
 
     array([ 0.,  0.,  5.])
@@ -83,9 +85,10 @@ class View(object):
                 yield (self.camera_position, point)
 
     def __repr__(self):
-        return ('View at '+str(self.camera_position)+' pointed at '+str(self.screen_height_ray[0]) +
-                '\n with horizon vector '+str(self.unit_w_vec)+'\n and up vector '+str(self.unit_h_vec))
-
+        return ('View at '+str(self.camera_position)+' pointed at '+
+                str(self.screen_height_ray[0]) +
+                '\n with horizontal vector '+str(self.unit_w_vec)+
+                '\n and up vector '+str(self.unit_h_vec))
 
 class World(object):
     def __init__(self):
@@ -110,7 +113,7 @@ class World(object):
             return self.render_no_intersection_value(ray)
 
     def render_no_intersection_value(self, ray):
-        return 0
+        return .05
 
     def debug_render_view(self, view, w_samples, h_samples, width, height):
         for ray in view.get_ray_generator(w_samples, h_samples, width, height):
@@ -152,16 +155,17 @@ def getTestView():
     return View(((0,0,0), (1,0,0)), ((0,0,0), (0,1,0)), 2)
 
 def test():
+    w = World()
     w.add_object(Sphere((0,0,0), 1))
     w.add_object(Sphere((3,0,0), 1))
     w.add_object(Sphere((0,4,0), 2))
     w.add_object(Sphere((0,0,6), 5))
+    w.add_view(View(((0,0,-5), (2,0,-4)), ((0,0,-5), (0,2,-5)), -4))
     w.add_view(View(((0,0,-3), (2,0,-3)), ((0,0,-3), (0,2,-3)), -4))
-    w.add_view(View(((0,0,-3), (2,0,-1)), ((0,0,-3), (0,2,-3)), -4))
+    w.add_view(View(((0,0,-5), (2,0,-6)), ((0,0,-5), (0,2,-5)), -4))
     print w
     w.render_images(100, 100, 5, 5)
-    w.debug_render_view(w.views[0], 10, 10, 5, 5)
-    print w.views
+    #w.debug_render_view(w.views[0], 10, 10, 5, 5)
     raw_input()
     import os
     os.system('killall display')
@@ -169,4 +173,4 @@ def test():
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
-    w = World()
+    test()
