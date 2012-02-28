@@ -62,8 +62,32 @@ def get_distance(point1, point2):
     """Returns the distance
     >>> get_distance((0,0,1), (-1,0,0))
     1.4142...
+    >>> get_distance((0,0,3), (0,0,0))
+    3.0
+    >>> get_distance((0,0,0), (0,0,3))
+    3.0
     """
-    return numpy.sqrt(numpy.abs(numpy.sum(numpy.array(point1) - numpy.array(point2))))
+    result = numpy.sqrt(numpy.abs(numpy.sum((numpy.array(point1) - numpy.array(point2))**2)))
+    return result
+
+def get_projection_of_ray_onto_ray(ray1, ray2):
+    """Length of projection of ray1 onto ray2
+
+    >>> get_projection_of_ray_onto_ray(((0,0,0),(0,1,0)), ((0,0,0),(0,0,1)))
+    0.0
+    >>> get_projection_of_ray_onto_ray(((0,0,0),(0,1,1)), ((0,0,0),(0,0,1)))
+    1.0
+    >>> get_projection_of_ray_onto_ray(((0,0,0),(0,1,-1)), ((0,0,0),(0,0,1)))
+    -1.0
+    >>> get_projection_of_ray_onto_ray(((0,0,0),(0,1,1)), ((0,0,0),(0,0,1)))
+    1.0
+    """
+    ray1 = numpy.array(ray1)
+    ray2 = numpy.array(ray2)
+    if not all(ray1[0] == ray2[0]):
+        raise Exception("Ray origins must be equal!")
+    result = numpy.dot(ray1[1] - ray1[0], ray2[1] - ray2[0]) / get_distance(*ray2)
+    return result
 
 if __name__ == '__main__':
     import doctest

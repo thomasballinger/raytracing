@@ -1,8 +1,10 @@
-"""yay"""
+"""Renders 3d scences by raytracing"""
 import vectormath
 import numpy
 from PIL import Image
 import random
+
+bounces = []
 
 class Sphere(object):
     """Represents a sphere object in a 3d world
@@ -32,12 +34,41 @@ class Sphere(object):
     def get_normal_ray(self, point):
         return (self.center, point)
 
+    def get_bounced_ray(self, ray, intersection):
+        """Returns a ray refleced across the normal at a point
+
+        >>> s = Sphere((0,0,0), 1)
+        >>> s.get_bounced_ray(((0, 0, 4), (0, 0, 3)), (0, 0, 1))
+        (array([ 0.,  0.,  1.]), array([ 0.,  0.,  2.]))
+        >>> s.get_bounced_ray(((0, 3, 4), (0, 2, 3)), (0, 0, 1))
+        (array([ 0.,  0.,  1.]), array([ 0... -0.7...1.7...]))
+
+        """
+        intersection = numpy.array(intersection, dtype=float)
+        ray = numpy.array(ray)
+        normal_ray = self.get_normal_ray(intersection)
+        n_vec = normal_ray[1] - normal_ray[0]
+        unit_n_vec = n_vec / numpy.linalg.norm(n_vec)
+        ray_vec = ray[1] - ray[0]
+        unit_ray_vec = ray_vec / numpy.linalg.norm(ray_vec)
+        bounce_vec = unit_ray_vec - 2 * unit_n_vec * (numpy.dot(unit_ray_vec, unit_n_vec))
+        result = (intersection, intersection + bounce_vec)
+        return result
+
     def __repr__(self):
         return 'Sphere of radius '+str(self.radius)+' at '+str(self.center)
 
-    def render_intersection(self, intersection, ray, bouncenum):
+    def render_intersection(self, intersection, ray, world, bouncenum):
         """Returns the value to render, possibly by recusively rendering reflections"""
-        return self.color
+        global bounces
+        bounces.append(self)
+        bounce_ray = self.get_bounced_ray(ray, intersection)
+        if bouncenum > 10:
+            print 'bouncelimit acheived'
+            print bounces
+            bounces = []
+            return self.color
+        return .3 * self.color + .7 * world.render_ray(bounce_ray, bouncenum+1)
 
 class View(object):
     """Represents a camera, and a rectangle on a plane, between which rays can be traced
@@ -105,10 +136,19 @@ class World(object):
         intersections = []
         for obj in self.objects:
             intersections.extend([obj, intersect] for intersect in obj.get_intersections(ray))
-        intersections.sort(key=lambda x: vectormath.get_distance(ray[0], x[1]))
-        #print 'intersections:', intersections
-        if intersections:
-            return intersections[0][0].render_intersection(intersections[0][1], ray, bouncenum)
+
+        def object_intersection_sort_method(x):
+            obj, intersection = x
+            proj = vectormath.get_projection_of_ray_onto_ray((ray[0], intersection), ray)
+            if proj < .0001: # behind object - return inf so goes to back of list
+                return float('inf')
+            else:
+                return proj
+
+        #intersections.sort(key=lambda x: vectormath.get_distance(ray[0], x[1]))
+        intersections.sort(key=object_intersection_sort_method)
+        if intersections and object_intersection_sort_method(intersections[0]) < float('inf'):
+            return intersections[0][0].render_intersection(intersections[0][1], ray, self, bouncenum)
         else:
             return self.render_no_intersection_value(ray)
 
@@ -132,10 +172,14 @@ class World(object):
         w_counter = 0
         h_counter = 0
         for ray in view.get_ray_generator(w_samples, h_samples, viewscreen_width, viewscreen_height):
+            global bounces
+            bounces = []
             r = self.render_ray(ray, 1)
             # height switches so as to correspond with PIL Image indexing,
             #  so width corresponds to first view vector, height to the second
-            pixels[w_counter, (h_samples - h_counter - 1)] = 256*r
+
+            #TODO figure out what values Image wants in pixel array
+            pixels[w_counter, (h_samples - h_counter - 1)] = int(256*r)
             w_counter = w_counter + 1
             if w_counter == w_samples:
                 w_counter = 0
@@ -160,7 +204,7 @@ def test():
     w.add_object(Sphere((3,0,0), 1))
     w.add_object(Sphere((0,4,0), 2))
     w.add_object(Sphere((0,0,6), 5))
-    w.add_view(View(((0,0,-5), (2,0,-4)), ((0,0,-5), (0,2,-5)), -4))
+    #w.add_view(View(((0,0,-5), (2,0,-4)), ((0,0,-5), (0,2,-5)), -4))
     w.add_view(View(((0,0,-3), (2,0,-3)), ((0,0,-3), (0,2,-3)), -4))
     w.add_view(View(((0,0,-5), (2,0,-6)), ((0,0,-5), (0,2,-5)), -4))
     print w
@@ -172,5 +216,5 @@ def test():
 
 if __name__ == '__main__':
     import doctest
-    doctest.testmod()
+    doctest.testmod(optionflags=doctest.ELLIPSIS)
     test()
