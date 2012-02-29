@@ -31,10 +31,14 @@ class Sphere(Solid):
     >>> Sphere((0,0,0), 1).get_first_intersection(((4,0,0), (3,0,0)))
     (1.0, 0.0, 0.0)
     """
-    def __init__(self, center, radius):
+    def __init__(self, center, radius, reflectivity=.7, color=None):
         self.center = numpy.array(center, dtype=numpy.float_)
         self.radius = float(radius)
-        self.color = min(1, random.random() + .1)
+        if color:
+            self.color = color
+        else:
+            self.color = min(1, random.random() + .1)
+        self.reflectivity = reflectivity
 
     def get_first_intersection(self, ray):
         line_intersections = self.get_intersections(ray)
@@ -87,7 +91,7 @@ class Sphere(Solid):
             print bounces
             bounces = []
             return self.color
-        return .3 * self.color + .7 * world.render_ray(bounce_ray, bouncenum+1)
+        return (1 - self.reflectivity) * self.color + self.reflectivity * world.render_ray(bounce_ray, bouncenum+1)
 
 class View(object):
     """Represents a camera, and a rectangle on a plane, between which rays can be traced
@@ -223,9 +227,11 @@ def test():
     w.add_object(Sphere((3,0,0), 1))
     w.add_object(Sphere((0,4,0), 2))
     w.add_object(Sphere((0,0,6), 5))
+    w.add_object(Sphere((100,100,0), 80, 0, .95))
     #w.add_view(View(((0,0,-5), (2,0,-4)), ((0,0,-5), (0,2,-5)), -4))
     w.add_view(View(((0,0,-3), (2,0,-3)), ((0,0,-3), (0,2,-3)), -4))
     w.add_view(View(((0,0,-5), (2,0,-6)), ((0,0,-5), (0,2,-5)), -4))
+    w.add_view(View(((0,0,-100), (2,0,-100)), ((0,0,-100), (0,2,-100)), -4))
     print w
     w.render_images(100, 100, 5, 5)
     #w.debug_render_view(w.views[0], 10, 10, 5, 5)
