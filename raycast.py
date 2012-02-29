@@ -5,15 +5,34 @@ from PIL import Image
 import random
 
 bounces = []
+BOUNCELIMIT = 15
 
-class Sphere(object):
+class Solid(object):
+    """Represents an object in a 3d world which can interact with light"""
+    def get_intersections(self, ray):
+        raise NotImplementedError()
+    def get_bounced_ray(self, ray, intersection):
+        raise NotImplementedError()
+    def render_intersection(self, intersection, ray, world, bouncenum):
+        raise NotImplementedError()
+
+class Triangle(Solid):
+    """A depth-less plane"""
+    def __init__(self, points):
+        self.points = numpy.array(points, dtype=numpy.float_)
+    def get_intersections(self, ray):
+        return vectormath.get_line_intersection_with_plane(ray, self.points)
+    def get_bounced_ray(self, ray, intersection):
+        pass
+
+class Sphere(Solid):
     """Represents a sphere object in a 3d world
 
     >>> Sphere((0,0,0), 1).get_first_intersection(((4,0,0), (3,0,0)))
     (1.0, 0.0, 0.0)
     """
     def __init__(self, center, radius):
-        self.center = numpy.array(center, dtype=numpy.float64)
+        self.center = numpy.array(center, dtype=numpy.float_)
         self.radius = float(radius)
         self.color = min(1, random.random() + .1)
 
@@ -44,7 +63,7 @@ class Sphere(object):
         (array([ 0.,  0.,  1.]), array([ 0... -0.7...1.7...]))
 
         """
-        intersection = numpy.array(intersection, dtype=float)
+        intersection = numpy.array(intersection, dtype=numpy.float_)
         ray = numpy.array(ray)
         normal_ray = self.get_normal_ray(intersection)
         n_vec = normal_ray[1] - normal_ray[0]
@@ -63,7 +82,7 @@ class Sphere(object):
         global bounces
         bounces.append(self)
         bounce_ray = self.get_bounced_ray(ray, intersection)
-        if bouncenum > 10:
+        if bouncenum > BOUNCELIMIT:
             print 'bouncelimit acheived'
             print bounces
             bounces = []
@@ -91,8 +110,8 @@ class View(object):
     def __init__(self, screen_width_ray, screen_height_ray, distance):
         if screen_height_ray[0] != screen_width_ray[0]:
             raise Exception('Rays should have same origin');
-        self.screen_width_ray = numpy.array(screen_width_ray, dtype=numpy.float64)
-        self.screen_height_ray = numpy.array(screen_height_ray, dtype=numpy.float64)
+        self.screen_width_ray = numpy.array(screen_width_ray, dtype=numpy.float_)
+        self.screen_height_ray = numpy.array(screen_height_ray, dtype=numpy.float_)
         self.camera_distance = float(distance)
         self.camera_position = vectormath.get_position_from_plane_and_distance(
                 screen_width_ray, screen_height_ray, distance)
