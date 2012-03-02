@@ -1,18 +1,30 @@
 Raycasting
+----------
 
-Need to define the color of a pixel, once the first intersecting
-object of the pixel ray has been found
+Features:
 
+* Ambient, specular, and diffuse light
 
-* Light emitted from an object - color = green
-* Direct reflextion - "Specular reflection" - bouncing the ray directly
+* Spheres, planes 
+
+* Multiple views
+
+To Do:
+* finite planes (triangles, squares)
    off of the object, mirror characteristic
-* light from light source (reverse ray tracing) could be used to
-   illuminate objects, plus some diffuse reflection?
-   Maybe just use this information for how to ambiantly light objects?
-* Shadow shortcut ?
+   
+* Optimize diffuse light (no need to look up at each bounce)
+  I think this is light hashing - 
+  Right now light gets calculated many times for very similar intersections.
+  Maybe that is what a "lightmap" is!?!
+
+* Optimize until realtime ascii rendering is possible
+
 * refactor to use origin, vector representations instead of rays, and
    factor out everything mathy
+
 * figure out proper way to add light - logarithmically, I imagine?
-* Add light hashing - right now light gets calculated many times for
-   very similar intersections.
+
+Not going to impement at this time:
+
+* Color - light emitted from an object - color = green
