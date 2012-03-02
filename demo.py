@@ -20,7 +20,7 @@ def test():
     w.add_view(View(((0,0,-5), (2,0,-6)), ((0,0,-5), (0,2,-5)), -4))
     #w.add_view(View(((0,0,-100), (2,0,-100)), ((0,0,-100), (0,2,-100)), -4))
     print w
-    w.render_images(100, 100, 5, 5)
+    w.render_images(100, 100, 2, 2)
     #w.render_asciis(220, 100, 5, 5)
     #w.debug_render_view(w.views[0], 10, 10, 5, 5)
     #raw_input()

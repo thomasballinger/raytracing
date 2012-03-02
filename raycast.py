@@ -44,7 +44,6 @@ class Checkerboard(Solid):
 
     def get_bounced_ray(self, ray, intersection):
         """Returns a ray refleced across the normal at a point
-
         """
         intersection = numpy.array(intersection, dtype=numpy.float_)
         ray = numpy.array(ray)
@@ -56,7 +55,6 @@ class Checkerboard(Solid):
         bounce_vec = unit_ray_vec - 2 * unit_n_vec * (numpy.dot(unit_ray_vec, unit_n_vec))
         result = (intersection, intersection + bounce_vec)
         return result
-        pass
 
     def __repr__(self):
         return ' Checkerboard of rays '+str(tuple(self.ray1))+' and '+str(tuple(self.ray2))

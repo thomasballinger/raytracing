@@ -60,6 +60,13 @@ def get_line_intersections_with_plane(line, points):
     return [p]
 
 def get_line_intersection_with_triangle(line, points):
+    """
+    >>> get_line_intersections_with_plane([[0.,0,-10], [0,0,-5]], [[0.,0,0], [1,0,0], [0,1,0]])
+    array([ 0.,  0.,  0.])
+    >>> get_line_intersections_with_plane([[10,10,10], [5,5,5]], [[0.,0,0], [1,0,0], [0,1,0]])
+    array([ 0.,  0.,  0.])
+    """
+    intersection = get_intersection_with_plane(line, points)
     raise NotImplementedError()
 
 def get_position_from_plane_and_distance(width_ray, height_ray, distance):

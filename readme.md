@@ -10,6 +10,9 @@ Features:
 * Multiple views
 
 To Do:
+
+* more flexible checkerboard
+
 * finite planes (triangles, squares)
    off of the object, mirror characteristic
    
@@ -25,6 +28,6 @@ To Do:
 
 * figure out proper way to add light - logarithmically, I imagine?
 
-Not going to impement at this time:
+Not planning to impement at this time:
 
 * Color - light emitted from an object - color = green
