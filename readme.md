@@ -11,3 +11,6 @@ pixel ray has been found
    illuminate objects, plus some diffuse reflection?
    Maybe just use this information for how to ambiantly light objects?
 * Shadow shortcut ?
+* refactor to use origin, vector representations instead of rays, and
+   factor out everything mathy
+* figure out proper way to add light - logarithmically, I imagine?
