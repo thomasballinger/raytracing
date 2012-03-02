@@ -1,7 +1,7 @@
 Raycasting
 
-Need to define the color of a pixel, once the first intersecting object of the
-pixel ray has been found
+Need to define the color of a pixel, once the first intersecting
+object of the pixel ray has been found
 
 
 * Light emitted from an object - color = green
@@ -14,3 +14,5 @@ pixel ray has been found
 * refactor to use origin, vector representations instead of rays, and
    factor out everything mathy
 * figure out proper way to add light - logarithmically, I imagine?
+* Add light hashing - right now light gets calculated many times for
+   very similar intersections.

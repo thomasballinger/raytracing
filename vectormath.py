@@ -36,6 +36,32 @@ def get_line_intersections_with_sphere(line, center, radius):
     else:
         raise Exception("logic error!")
 
+def get_line_intersections_with_plane(line, points):
+    """Returns a list of intersection points
+
+    >>> get_line_intersections_with_plane([[0.,0,-10], [0,0,-5]], [[0.,0,0], [1,0,0], [0,1,0]])
+    array([ 0.,  0.,  0.])
+    >>> get_line_intersections_with_plane([[10,10,10], [5,5,5]], [[0.,0,0], [1,0,0], [0,1,0]])
+    array([ 0.,  0.,  0.])
+    """
+
+    lp1, lp2 = numpy.array(line)
+    lv = lp2 - lp1
+    p1, p2, p3 = numpy.array(points)
+    x1, y1, z1 = p1
+    x2, y2, z2 = p2
+    x3, y3, z3 = p3
+
+    normal_vector = numpy.cross(p1-p2,p1-p3)
+    unit_normal_vector = normal_vector / numpy.linalg.norm(normal_vector)
+
+    t = numpy.dot(unit_normal_vector, p1-lp1) / numpy.dot(unit_normal_vector, lv)
+    p = lp1 + lv*t
+    return [p]
+
+def get_line_intersection_with_triangle(line, points):
+    raise NotImplementedError()
+
 def get_position_from_plane_and_distance(width_ray, height_ray, distance):
     """
     Finds a positions "distance" back along the line perpendicular to both rays

@@ -1,5 +1,6 @@
 """Renders 3d scences by raytracing"""
 import vectormath
+import sys
 import numpy
 from PIL import Image
 import random
@@ -15,7 +16,6 @@ class Solid(object):
         raise NotImplementedError()
     def render_intersection(self, intersection, ray, world, bouncenum):
         raise NotImplementedError()
-
 class Triangle(Solid):
     """A depth-less plane"""
     def __init__(self, points):
@@ -24,6 +24,75 @@ class Triangle(Solid):
         return vectormath.get_line_intersection_with_plane(ray, self.points)
     def get_bounced_ray(self, ray, intersection):
         pass
+
+class Checkerboard(Solid):
+    """A depth-less plane"""
+    def __init__(self, ray1, ray2, reflectivity=.5):
+        if not ray1[0] == ray2[0]:
+            raise Exception('Rays should have same origin');
+        self.ray1 = numpy.array(ray1, dtype=numpy.float_)
+        self.ray2 = numpy.array(ray2, dtype=numpy.float_)
+        self.normal = numpy.cross(self.ray1[1] - self.ray1[0], self.ray2[1] - self.ray1[0])
+        self.reflectivity = reflectivity
+
+    def get_normal_ray(self, point):
+        return (point, point+self.normal)
+
+    def get_intersections(self, ray):
+        r = vectormath.get_line_intersections_with_plane(ray, (self.ray1[0], self.ray1[1], self.ray2[1]))
+        return r
+
+    def get_bounced_ray(self, ray, intersection):
+        """Returns a ray refleced across the normal at a point
+
+        """
+        intersection = numpy.array(intersection, dtype=numpy.float_)
+        ray = numpy.array(ray)
+        normal_ray = self.get_normal_ray(intersection)
+        n_vec = normal_ray[1] - normal_ray[0]
+        unit_n_vec = n_vec / numpy.linalg.norm(n_vec)
+        ray_vec = ray[1] - ray[0]
+        unit_ray_vec = ray_vec / numpy.linalg.norm(ray_vec)
+        bounce_vec = unit_ray_vec - 2 * unit_n_vec * (numpy.dot(unit_ray_vec, unit_n_vec))
+        result = (intersection, intersection + bounce_vec)
+        return result
+        pass
+
+    def __repr__(self):
+        return ' Checkerboard of rays '+str(tuple(self.ray1))+' and '+str(tuple(self.ray2))
+
+    def render_intersection(self, intersection, ray, world, bouncenum):
+        """Returns the value to render, possibly by recusively rendering reflections"""
+        global bounces
+        bounces.append(self)
+
+        # getting color
+        r1mod = (vectormath.get_projection_of_ray_onto_ray(
+                [self.ray1[0], intersection],
+                self.ray1
+                ) % vectormath.get_distance(*self.ray1))
+        r2mod = (vectormath.get_projection_of_ray_onto_ray(
+                [self.ray2[0], intersection],
+                self.ray2
+                ) % vectormath.get_distance(*self.ray2))
+        if (numpy.floor(r1mod) + numpy.floor(r2mod)) % 2 == 0:
+            color = 0
+        else:
+            color = 1
+        if bouncenum > BOUNCELIMIT:
+            print 'bouncelimit acheived, ignoring further reflections for this ray'
+            print bounces
+            bounces = []
+            return self.color * .5 + self.color * .5 * world.render_light(intersection, ray)
+        else:
+            bounce_ray = self.get_bounced_ray(ray, intersection)
+
+        v = (
+                color * .5 +
+                self.reflectivity/2 * world.render_ray(bounce_ray, bouncenum+1) +
+                color * (1 - self.reflectivity/2) * world.render_light(intersection, ray)
+                )
+        return v
 
 class Sphere(Solid):
     """Represents a sphere object in a 3d world
@@ -87,15 +156,22 @@ class Sphere(Solid):
         bounces.append(self)
         bounce_ray = self.get_bounced_ray(ray, intersection)
         if bouncenum > BOUNCELIMIT:
-            print 'bouncelimit acheived'
+            print 'bouncelimit acheived, ignoring further reflections for this ray'
             print bounces
             bounces = []
             return self.color
-        return (
+        v = (
                 (0.0) * self.color +
                 self.reflectivity * world.render_ray(bounce_ray, bouncenum+1) +
                 (1 - self.reflectivity) * world.render_light(intersection, ray)
                 )
+        if v < 0:
+            print 'from self:', (0.0) * self.color
+            print 'from reflection:', self.reflectivity * world.render_ray(bounce_ray, bouncenum+1)
+            print 'from light source:', (1 - self.reflectivity) * world.render_light(intersection, ray)
+            print 'reflectivity of ', self.reflectivity
+            raw_input()
+        return v
 
 class Light(object):
     """Point light source for evaluating light on surfaces.
@@ -103,7 +179,7 @@ class Light(object):
 
     >>> l = Light((0,0,-10))
     >>> l
-    Light at [  0.   0. -10.]
+     Light at [  0.   0. -10.]
     >>> l.get_light_theta(((0,0,0),(0,0,-1)))
     3.1415...
     >>> l.get_light_theta(((0,0,0),(1,0,0)))
@@ -124,11 +200,8 @@ class Light(object):
         unit_light_vec = light_vec / numpy.linalg.norm(light_vec)
         n_vec = normal_ray[1] - normal_ray[0]
         unit_n_vec = n_vec / numpy.linalg.norm(n_vec)
-        #print 'got light theta:'
-        #print 'point', intersection
-        #print 'normal', unit_n_vec
-        #raw_input()
-        return numpy.arccos(numpy.dot(unit_light_vec, unit_n_vec))
+        r = numpy.arccos(numpy.dot(unit_light_vec, unit_n_vec))
+        return r
 
     def get_light_contribution(self, requested_intersection, ray, world):
         result = world.get_first_ray_intersection(ray)
@@ -141,7 +214,7 @@ class Light(object):
         if vectormath.get_distance(intersection, requested_intersection) < SAME_INTERSECTION_TOLERANCE:
             normal_ray = obj.get_normal_ray(intersection)
             theta = self.get_light_theta(normal_ray)
-            return numpy.cos(theta)
+            return max(0.0, numpy.cos(theta))
         else:
             print 'different intersection found - this point is in shadow!'
             return 0
@@ -156,9 +229,9 @@ class View(object):
 
     >>> v = View(((0,0,3), (1,0,3)), ((0,0,3), (0,1,3)), 2)
     >>> v
-    View at [ 0.  0.  5.] pointed at [ 0.  0.  3.]
-     with horizontal vector [ 1.  0.  0.]
-     and up vector [ 0.  1.  0.]
+     View at [ 0.  0.  5.] pointed at [ 0.  0.  3.]
+      with horizontal vector [ 1.  0.  0.]
+      and up vector [ 0.  1.  0.]
 
     array([ 0.,  0.,  5.])
     >>> list(v.get_ray_generator(10, 10, 20, 20))[0]
@@ -185,7 +258,6 @@ class View(object):
                 (height * self.unit_h_vec/2))
 
         for row in xrange(num_y_samples):
-            print row, '/', num_y_samples
             for col in xrange(num_x_samples):
                 point = (view_start +
                         self.unit_w_vec * (float(width) * col / (num_x_samples - 1)) +
@@ -225,7 +297,6 @@ class World(object):
                 return float('inf')
             else:
                 return proj
-
         intersections.sort(key=object_intersection_sort_method)
         if intersections and object_intersection_sort_method(intersections[0]) < float('inf'):
             return intersections[0] # this is an (object, intersection) pair
@@ -247,7 +318,6 @@ class World(object):
     def render_light(self, intersection, ray):
         value = 0
         for light in self.lights:
-            #print 'rendering light!'
             value += light.get_light_contribution(intersection, ray, self)
         return value
 
@@ -262,7 +332,16 @@ class World(object):
             im = self.render_view(view, w_samples, h_samples, viewscreen_width, viewscreen_height)
             im.show()
 
+    def render_asciis(self, w_samples, h_samples, viewscreen_width, viewscreen_height):
+        """"""
+        for view in self.views:
+            s = self.render_ascii(view, w_samples, h_samples, viewscreen_width, viewscreen_height)
+            print
+            print s
+            print
+
     def render_view(self, view, w_samples, h_samples, viewscreen_width, viewscreen_height):
+        sys.stderr.write('Rendering view '+str(view)+'\n')
         im = Image.new("1", (w_samples, h_samples))
         pixels = im.load()
         w_counter = 0
@@ -280,7 +359,55 @@ class World(object):
             if w_counter == w_samples:
                 w_counter = 0
                 h_counter = h_counter + 1
+                sys.stderr.write(str(h_counter)+'/'+str(h_samples)+'\n')
         return im
+
+    def render_ascii(self, view, w_samples, h_samples, viewscreen_width, viewscreen_height):
+        sys.stderr.write('Rendering view '+str(view)+'\n')
+        im = numpy.zeros((h_samples, w_samples), dtype=numpy.character)
+        w_counter = 0
+        h_counter = 0
+
+        def get_ascii_char(r):
+            """Returns a representative ascii char based on a 0-1 value
+
+            Takes the whole pixel into account, not parts of it - hence
+            characters that change the intensity of the whole space are used
+            """
+            zeroToTen = int((r+.0499) * 10)
+            zeroToTenDict = {
+                    0:' ',
+                    1:'.',
+                    2:'-',
+                    3:'~',
+                    4:'o',
+                    5:'e',
+                    6:'O',
+                    8:'0',
+                    9:'&',
+                    10:'#',
+                    }
+            char = zeroToTenDict.get(zeroToTen, '?')
+            return char
+
+        for ray in view.get_ray_generator(w_samples, h_samples, viewscreen_width, viewscreen_height):
+            global bounces
+            bounces = []
+            r = self.render_ray(ray, 1)
+            # height switches so as to correspond with PIL Image indexing,
+            #  so width corresponds to first view vector, height to the second
+
+            im[(h_samples - h_counter - 1), w_counter] = get_ascii_char(r)
+            w_counter = w_counter + 1
+            if w_counter == w_samples:
+                w_counter = 0
+                h_counter = h_counter + 1
+                sys.stderr.write(str(h_counter)+'/'+str(h_samples)+'\n')
+        newlines = numpy.zeros((h_samples, 1), dtype=numpy.character)
+        newlines[:] = '\n'
+        with_newlines = numpy.hstack([im, newlines])
+        s = ''.join(with_newlines.flat)
+        return s
 
     def __repr__(self):
         s = 'World with views:'
@@ -294,30 +421,8 @@ class World(object):
 def getTestView():
     return View(((0,0,0), (1,0,0)), ((0,0,0), (0,1,0)), 2)
 
-def test():
-    w = World()
-    w.add_object(Sphere((0,0,0), 1))
-    w.add_object(Sphere((3,0,0), 1))
-    w.add_object(Sphere((0,4,0), 2, 1))
-    w.add_object(Sphere((0,0,6), 5))
-
-    # imitation light
-    #w.add_object(Sphere((100,100,0), 80, 0, .95))
-
-    w.add_light(Light((100, 100, 0)))
-
-    #w.add_view(View(((0,0,-5), (2,0,-4)), ((0,0,-5), (0,2,-5)), -4))
-    w.add_view(View(((0,0,-3), (2,0,-3)), ((0,0,-3), (0,2,-3)), -4))
-    w.add_view(View(((0,0,-5), (2,0,-6)), ((0,0,-5), (0,2,-5)), -4))
-    w.add_view(View(((0,0,-100), (2,0,-100)), ((0,0,-100), (0,2,-100)), -4))
-    print w
-    w.render_images(300, 300, 5, 5)
-    #w.debug_render_view(w.views[0], 10, 10, 5, 5)
-    raw_input()
-    import os
-    os.system('killall display')
 
 if __name__ == '__main__':
     import doctest
     doctest.testmod(optionflags=doctest.ELLIPSIS)
-    test()
+    #test()
