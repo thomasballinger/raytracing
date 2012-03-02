@@ -11,15 +11,13 @@ Features:
 
 To Do:
 
-* more flexible checkerboard
+* more flexible checkerboard (checker size based on defining vectors)
 
 * finite planes (triangles, squares)
-   off of the object, mirror characteristic
    
 * Optimize diffuse light (no need to look up at each bounce)
-  I think this is light hashing - 
-  Right now light gets calculated many times for very similar intersections.
-  Maybe that is what a "lightmap" is!?!
+  fuzzy light hashing - 
+  right now light gets calculated many times for very similar intersections.
 
 * Optimize until realtime ascii rendering is possible
 
