@@ -5,6 +5,7 @@ import numpy
 from PIL import Image
 import random
 
+# EVIL global variables for debugging
 bounces = []
 BOUNCELIMIT = 15
 
@@ -328,6 +329,7 @@ class World(object):
         """"""
         for view in self.views:
             im = self.render_view(view, w_samples, h_samples, viewscreen_width, viewscreen_height)
+            im.save('/tmp/lastImage.png')
             im.show()
 
     def render_asciis(self, w_samples, h_samples, viewscreen_width, viewscreen_height):
