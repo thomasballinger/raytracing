@@ -1,5 +1,7 @@
 Raycasting
 ----------
+<img src='http://i.imgur.com/GIdn4.png' title='Example Rendering' width='800px' />
+
 
 Features:
 
